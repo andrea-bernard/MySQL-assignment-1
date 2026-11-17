@@ -1,0 +1,155 @@
+-- =====================================================================
+-- MySQL Assignment 1 - DDL Commands & Constraints
+-- Requires MySQL 8.0.16+ (CHECK enforcement, RENAME COLUMN, expression DEFAULT)
+-- =====================================================================
+
+
+-- =====================================================================
+-- PART A: DDL COMMANDS
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- 1. CREATE: database and tables
+-- ---------------------------------------------------------------------
+CREATE DATABASE employee;
+USE employee;
+
+CREATE TABLE Departments (
+    department_id   INT PRIMARY KEY,
+    department_name VARCHAR(100)
+);
+
+CREATE TABLE Location (
+    location_id INT PRIMARY KEY,
+    location    VARCHAR(30)
+);
+
+CREATE TABLE Employees (
+    employee_id   INT PRIMARY KEY,
+    employee_name VARCHAR(50),
+    gender        ENUM('M','F'),
+    age           INT,
+    hire_date     DATE,
+    designation   VARCHAR(100),
+    department_id INT,
+    location_id   INT,
+    salary        DECIMAL(10,2)
+);
+
+-- ---------------------------------------------------------------------
+-- 2. ALTER
+-- ---------------------------------------------------------------------
+-- a) Add a new column "email"
+ALTER TABLE Employees
+    ADD COLUMN email VARCHAR(100);
+
+-- b) Widen the data type of "designation"
+ALTER TABLE Employees
+    MODIFY COLUMN designation VARCHAR(255);
+
+-- c) Drop the "age" column
+ALTER TABLE Employees
+    DROP COLUMN age;
+
+-- d) Rename "hire_date" to "date_of_joining"
+ALTER TABLE Employees
+    RENAME COLUMN hire_date TO date_of_joining;
+-- (Older MySQL versions: ALTER TABLE Employees CHANGE hire_date date_of_joining DATE;)
+
+-- ---------------------------------------------------------------------
+-- 3. RENAME tables
+-- ---------------------------------------------------------------------
+RENAME TABLE Departments TO Departments_Info;
+RENAME TABLE Location    TO Locations;
+
+-- ---------------------------------------------------------------------
+-- 4. TRUNCATE
+-- ---------------------------------------------------------------------
+TRUNCATE TABLE Employees;
+
+-- ---------------------------------------------------------------------
+-- 5. DROP
+-- ---------------------------------------------------------------------
+DROP TABLE Employees;
+DROP DATABASE employee;
+
+
+-- =====================================================================
+-- PART B: CONSTRAINTS
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- 1. Database recreation (drop if exists, then recreate)
+-- ---------------------------------------------------------------------
+DROP DATABASE IF EXISTS employee;
+CREATE DATABASE employee;
+USE employee;
+
+-- ---------------------------------------------------------------------
+-- 2. Departments table
+--    - department_id uniquely identifies each department (PRIMARY KEY)
+--    - department_name: no duplicates (UNIQUE), no NULLs (NOT NULL)
+-- ---------------------------------------------------------------------
+CREATE TABLE Departments (
+    department_id   INT PRIMARY KEY,
+    department_name VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- ---------------------------------------------------------------------
+-- 3. Location table
+--    - location_id auto-generated, sequentially incremented
+--    - location: no NULLs, no duplicates
+-- ---------------------------------------------------------------------
+CREATE TABLE Location (
+    location_id INT PRIMARY KEY AUTO_INCREMENT,
+    location    VARCHAR(30) NOT NULL UNIQUE
+);
+
+-- ---------------------------------------------------------------------
+-- 4. Employees table
+--    - employee_id: distinct identifier (PRIMARY KEY)
+--    - employee_name: always provided (NOT NULL)
+--    - gender: only 'M' or 'F' (ENUM + CHECK)
+--    - age: must be 18 or above (CHECK)
+--    - hire_date: defaults to the current date
+--    - department_id / location_id: FOREIGN KEYs to parent tables
+-- ---------------------------------------------------------------------
+CREATE TABLE Employees (
+    employee_id   INT PRIMARY KEY,
+    employee_name VARCHAR(50) NOT NULL,
+    gender        ENUM('M','F'),
+    age           INT,
+    hire_date     DATE DEFAULT (CURRENT_DATE),
+    designation   VARCHAR(100),
+    department_id INT,
+    location_id   INT,
+    salary        DECIMAL(10,2),
+
+    CONSTRAINT chk_gender CHECK (gender IN ('M','F')),
+    CONSTRAINT chk_age    CHECK (age >= 18),
+
+    CONSTRAINT fk_emp_department
+        FOREIGN KEY (department_id) REFERENCES Departments(department_id),
+    CONSTRAINT fk_emp_location
+        FOREIGN KEY (location_id)   REFERENCES Location(location_id)
+);
+
+
+-- =====================================================================
+-- OPTIONAL: quick tests to verify the constraints
+-- =====================================================================
+-- INSERT INTO Departments VALUES (1, 'HR');
+-- INSERT INTO Departments VALUES (2, 'HR');            -- fails: duplicate name
+-- INSERT INTO Departments VALUES (3, NULL);            -- fails: NULL name
+
+-- INSERT INTO Location (location) VALUES ('Chennai');  -- id auto = 1
+-- INSERT INTO Location (location) VALUES ('Chennai');  -- fails: duplicate
+
+-- INSERT INTO Employees (employee_id, employee_name, gender, age, designation, department_id, location_id, salary)
+-- VALUES (101, 'Asha', 'F', 28, 'Analyst', 1, 1, 55000.00);   -- hire_date = today
+-- INSERT INTO Employees (employee_id, employee_name, gender, age, department_id, location_id)
+-- VALUES (102, 'Ravi', 'M', 16, 1, 1);                         -- fails: age < 18
+-- INSERT INTO Employees (employee_id, employee_name, gender, age, department_id, location_id)
+-- VALUES (103, NULL, 'M', 30, 1, 1);                           -- fails: name NULL
+-- INSERT INTO Employees (employee_id, employee_name, gender, age, department_id, location_id)
+-- VALUES (104, 'Meena', 'F', 30, 99, 1);                       -- fails: invalid department FK
